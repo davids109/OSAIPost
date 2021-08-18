@@ -129,6 +129,77 @@ function onOpen(){
     writeBlock("E102=0.65")
 }
 
+function onParameter(name, value) {
+}
+
+function onSection() { //used once in dump file. seems good enough. will test on machinery later.
+  
+    writeln("");
+    
+    if (hasParameter("operation-comment")) {
+      var comment = getParameter("operation-comment");
+      if (comment) {
+        writeComment(comment);
+      }
+    }
+    
+    switch (tool.type) {
+    case TOOL_WATER_JET:
+      break;
+    default:
+      error(localize("The CNC does not support the required tool/process. Only water jet cutting is supported."));
+      return;
+    }
+    
+    switch (currentSection.jetMode) {
+    case JET_MODE_THROUGH:
+      break;
+    case JET_MODE_ETCHING:
+      error(localize("Etch cutting mode is not supported."));
+      break;
+    case JET_MODE_VAPORIZE:
+      error(localize("Vaporize cutting mode is not supported."));
+      break;
+    default:
+      error(localize("Unsupported cutting mode."));
+      return;
+    }
+    
+    { // pure 3D
+      var remaining = currentSection.workPlane;
+      if (!isSameDirection(remaining.forward, new Vector(0, 0, 1))) {
+        error(localize("Tool orientation is not supported."));
+        return;
+      }
+      setRotation(remaining);
+    }
+  
+    forceAny();
+  
+    var initialPosition = getFramePosition(currentSection.getInitialPosition());
+    writeBlock(gMotionModal.format(0), xOutput.format(initialPosition.x), yOutput.format(initialPosition.y));
+}
+
+function onPower() {
+    //this function is called 6 times in the dump file. i dont know what it is.
+}
+
+function onRapid(_x, _y, _z) {
+  
+    var x = xOutput.format(_x);
+    var y = yOutput.format(_y);
+    
+    /**if (x || y) {
+      if (pendingRadiusCompensation >= 0) {
+        error(localize("Radius compensation mode cannot be changed at rapid traversal."));
+        return;
+      }
+      writeBlock(gMotionModal.format(0), x, y);
+      feedOutput.reset();
+    }*/
+    writeBlock("G00 X" + x + " Y" + y)
+}
+
 function onLinear(_x,_y,_z,feed){
     //var x = xOutput.format(_x);
     //var y = yOutput.format(_y);
@@ -140,6 +211,21 @@ function onLinear(_x,_y,_z,feed){
     writeln("G01 "+" X"+_x+" Y"+_y+" Z"+_z+" F"+feed);
 
 }
+
+function onCircular(clockwise, cx, cy, cz, x, y, z, feed) {
+    //need to figure this out
+}
+function onCommand(command){
+  return
+}
+function onSectionEnd() {
+  forceAny();
+}
+
+function delay(value){ //function used originally in the lisp post processor.
+    writeBlock("(DLY, " + String(Value))
+}
+  
 
 function onClose(){
     writeln("");
